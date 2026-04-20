@@ -760,36 +760,46 @@ function closeM(){document.getElementById('mo').classList.remove('open');const c
 function moOut(e){if(e.target!==document.getElementById('mo'))return;const sel=window.getSelection();if(sel&&sel.toString().length>0)return;closeM();}
 function saveMF(f,v){
   const c=S.cards.find(x=>x.id===editId);if(!c)return;
-  // Date validation
   if(f==='dateStart'||f==='dateEnd'){
-    const errEl=document.getElementById(f==='dateStart'?'mds-err':'mde-err');
-    // Reject years < 2013 or > 2099
+    const errS=document.getElementById('mds-err');
+    const errE=document.getElementById('mde-err');
+    // Reject years out of range
     if(v){
       const yr=parseInt(v.slice(0,4));
       if(isNaN(yr)||yr<2013||yr>2099){
+        const errEl=f==='dateStart'?errS:errE;
         if(errEl){errEl.textContent='Año fuera de rango (2013–2099)';errEl.style.display='block';}
-        // revert input to last valid saved value
         document.getElementById(f==='dateStart'?'mds':'mde').value=c[f]||'';
         return;
       }
     }
-    // Coherence check
-    const start=f==='dateStart'?v:(c.dateStart||'');
-    const end=f==='dateEnd'?v:(c.dateEnd||'');
-    if(start&&end&&end<start){
-      if(errEl){errEl.textContent='La fecha de fin no puede ser anterior al inicio';errEl.style.display='block';}
-      document.getElementById(f==='dateStart'?'mds':'mde').value=c[f]||'';
-      return;
+    // Coherence: clamp instead of reject
+    c[f]=v;
+    if(c.dateStart&&c.dateEnd){
+      if(c.dateEnd<c.dateStart){
+        if(f==='dateStart'){
+          // start moved past end → pull end forward to match start
+          c.dateEnd=c.dateStart;
+          document.getElementById('mde').value=c.dateEnd;
+          if(errE){errE.textContent='Fin ajustado al inicio automáticamente';errE.style.display='block';setTimeout(()=>errE.style.display='none',2500);}
+        } else {
+          // end moved before start → push start back to match end
+          c.dateStart=c.dateEnd;
+          document.getElementById('mds').value=c.dateStart;
+          if(errS){errS.textContent='Inicio ajustado al fin automáticamente';errS.style.display='block';setTimeout(()=>errS.style.display='none',2500);}
+        }
+      } else {
+        if(errS)errS.style.display='none';
+        if(errE)errE.style.display='none';
+      }
     }
-    if(errEl)errEl.style.display='none';
-    // Clear error on the other field too if now valid
-    const otherErr=document.getElementById(f==='dateStart'?'mde-err':'mds-err');
-    if(otherErr)otherErr.style.display='none';
+    saveAll();
+    if(document.getElementById('gv').classList.contains('active'))renderGantt();
+    return;
   }
   c[f]=v;
   saveAll();
   if(['status','color','cardTint'].includes(f))renderK();
-  if(['dateStart','dateEnd'].includes(f)&&document.getElementById('gv').classList.contains('active'))renderGantt();
 }
 document.getElementById('mtitle').addEventListener('input',e=>saveMF('title',e.target.value));
 function moveCard(colId){const c=S.cards.find(x=>x.id===editId);if(c)c.colId=colId;saveAll();renderK();const col=S.cols.find(x=>x.id===colId);document.getElementById('mcoli').textContent='en '+(col?col.title:'');}
