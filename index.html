@@ -90,7 +90,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 .col.col-drag{opacity:.4;pointer-events:none;}.col.col-drag-over{outline:2px dashed var(--accent);outline-offset:3px;}
 .col-hdr{display:flex;align-items:center;gap:7px;padding:10px 12px 8px;border-bottom:1px solid var(--border);cursor:grab;background:#fff;border-radius:10px 10px 0 0;}
 .col-dot{width:11px;height:11px;border-radius:50%;cursor:pointer;flex-shrink:0;border:1.5px solid rgba(0,0,0,.12);transition:transform .15s;}.col-dot:hover{transform:scale(1.3);}
-.col-name{flex:1;font-size:12px;font-weight:700;letter-spacing:.6px;background:none;border:none;color:var(--text);font-family:var(--font);cursor:text;outline:none;text-transform:uppercase;}
+.col-name{flex:1;font-size:12px;font-weight:700;letter-spacing:.6px;background:none;border:none;color:var(--text);font-family:var(--font);cursor:text;outline:none;text-transform:uppercase;user-select:text;}
 .col-meta{font-size:10px;color:var(--text-muted);font-family:var(--mono);white-space:nowrap;}
 .col-more{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;padding:0 3px;line-height:1;flex-shrink:0;}.col-more:hover{color:var(--text-muted);}
 /* progress bar always green */
@@ -123,7 +123,16 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 .card-eye:hover .eye-lbl{color:var(--text);}
 .eye-lbl{font-size:8px;color:var(--text-dim);font-family:var(--mono);white-space:nowrap;order:-1;}
 .card-title{font-size:14px;font-weight:700;line-height:1.4;margin-bottom:4px;font-family:var(--font);}
-.card-preview{font-size:11.5px;color:var(--text-muted);line-height:1.55;margin-bottom:5px;font-weight:400;font-family:var(--font);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.card-preview{font-size:11.5px;color:var(--text-muted);line-height:1.55;margin-bottom:5px;font-weight:400;font-family:var(--font);}
+.card-preview ul,.card-preview ol{padding-left:16px;margin:2px 0;}
+.card-preview li{margin:1px 0;}
+.card-chklist{display:flex;flex-direction:column;gap:2px;margin-bottom:5px;}
+.card-chk-item{font-size:11px;color:var(--text-muted);font-family:var(--font);display:flex;align-items:baseline;gap:5px;}
+.card-chk-item.done{text-decoration:line-through;opacity:.5;}
+.card-chk-box{font-size:10px;color:var(--text-dim);flex-shrink:0;}
+.card-chk-count{font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-left:auto;}
+.card-pdf-thumb{font-size:11px;color:var(--accent);font-family:var(--font);padding:3px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;margin-top:4px;display:inline-block;}
+.card-pdf-thumb:hover{background:var(--bg3);}
 .card-meta{display:flex;align-items:center;gap:7px;margin-bottom:2px;}
 /* STATUS: no fill, coloured outline, dark text */
 .cst{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;font-family:var(--mono);letter-spacing:.4px;background:transparent;color:#4a4540;}
@@ -403,6 +412,13 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
           <button class="rbtn" onclick="re('bold')" title="Ctrl+B"><b>B</b></button>
           <button class="rbtn" onclick="re('italic')" title="Ctrl+I"><i>I</i></button>
           <button class="rbtn" onclick="reBullet()">•&nbsp;Lista</button>
+          <div style="position:relative;display:inline-block;">
+            <button class="rbtn" onclick="toggleColorPicker()" title="Color de texto" id="clr-btn">A▾</button>
+            <div id="txt-color-picker" style="display:none;position:absolute;top:30px;left:0;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;box-shadow:var(--shadow-lg);display:flex;flex-wrap:wrap;gap:4px;width:160px;">
+              ${TEXT_COLORS.map(c=>`<div style="width:20px;height:20px;border-radius:4px;background:${c};cursor:pointer;border:2px solid transparent;" onmousedown="event.preventDefault();applyTextColor('${c}')" title="${c}"></div>`).join('')}
+              <div style="width:20px;height:20px;border-radius:4px;background:var(--text);cursor:pointer;border:2px solid transparent;" onmousedown="event.preventDefault();re('removeFormat')" title="Quitar color">✕</div>
+            </div>
+          </div>
         </div>
         <div id="mdesc" class="reditor" contenteditable="true" data-ph="Notas de diseño, contexto…"
           onkeydown="reKey(event)" oninput="saveRich()"></div>
@@ -414,6 +430,13 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
         <div class="achkr"><input class="achki" id="nchi" type="text" placeholder="Nuevo elemento…" onkeydown="if(event.key==='Enter')addChk()"><button class="achkg" onclick="addChk()">+</button></div>
       </div>
       <div><div class="mst">Imágenes adjuntas</div><div id="mimgs"></div></div>
+      <div>
+        <div class="mst">PDFs adjuntos</div>
+        <div id="mpdfs"></div>
+        <label style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;background:var(--surface2);border:1px dashed var(--border);border-radius:6px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text-muted);font-family:var(--font);">
+          📄 Añadir PDF <input type="file" id="mpdfup" accept=".pdf" multiple style="display:none" onchange="upPDFs(event)">
+        </label>
+      </div>
     </div>
     <div id="msb">
       <div class="sbs"><div class="sbl">Estado</div>
@@ -505,11 +528,12 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 
 <script>
 // ── CONSTANTS ──
-// Paleta de 7 tonos coordinados: intenso (bolita/línea) y pastel (fondo card / fondo columna)
-// Orden: sin color, gris, amarillo, verde, azul, rosa/rojo, violeta, naranja
-const DOT_COLORS  =['','#888888','#c0922a','#2e9e5a','#2980b9','#c0392b','#7d5cbf','#d97028'];
-const TINT_COLORS =['','#e8e8e8','#fdf5dc','#e2f5ea','#dceefb','#fde8e8','#ede5f7','#fdeee0'];
-const COL_BG_COLORS=['','#e8e8e8','#fdf5dc','#e2f5ea','#dceefb','#fde8e8','#ede5f7','#fdeee0'];
+// Palette update: add dark grey #5D667D to all color arrays
+const DOT_COLORS  =['','#5D667D','#888888','#c0922a','#2e9e5a','#2980b9','#c0392b','#7d5cbf','#d97028'];
+const TINT_COLORS =['','#e4e6eb','#e8e8e8','#fdf5dc','#e2f5ea','#dceefb','#fde8e8','#ede5f7','#fdeee0'];
+const COL_BG_COLORS=['','#e4e6eb','#e8e8e8','#fdf5dc','#e2f5ea','#dceefb','#fde8e8','#ede5f7','#fdeee0'];
+// Text colors for rich editor (same as DOT but without empty)
+const TEXT_COLORS=['#5D667D','#888888','#c0922a','#2e9e5a','#2980b9','#c0392b','#7d5cbf','#d97028','#1a1814'];
 const TAG_PAL=['#2ecc71','#3498db','#9b59b6','#e67e22','#e74c3c','#f1c40f','#16a085','#e91e8c','#ff5722','#607d8b','#795548','#f06292','#ffeb3b','#ff5252','#ea80fc','#ffd740','#00bcd4','#ef5350'];
 const MS_COLS=['','#5b4fcf','#d94f6e','#1a9e74','#c07a10','#2980b9','#8e44ad','#c0392b'];
 const DEF_TAGS=[
@@ -566,7 +590,7 @@ function switchTab(tab,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.c
 // ── SEARCH ──
 function doSearch(q){sq=q.trim().toLowerCase();document.getElementById('search-clear').style.display=q?'block':'none';applySearch();}
 function clearSearch(){document.getElementById('search-input').value='';doSearch('');}
-function applySearch(){if(!sq){document.querySelectorAll('.card').forEach(c=>c.classList.remove('c-fade'));return;}document.querySelectorAll('.card').forEach(el=>{const id=el.id.replace('card-','');const c=S.cards.find(x=>x.id===id);if(!c)return;const col=S.cols.find(x=>x.id===c.colId);const hay=[c.title,(c.descHTML||'').replace(/<[^>]+>/g,' '),...(c.tags||[]),c.status,col?col.title:''].join(' ').toLowerCase();el.classList.toggle('c-fade',!hay.includes(sq));});}
+function applySearch(){if(!sq){document.querySelectorAll('.card').forEach(c=>c.classList.remove('c-fade'));return;}document.querySelectorAll('.card').forEach(el=>{const id=el.id.replace('card-','');const c=S.cards.find(x=>x.id===id);if(!c)return;const col=S.cols.find(x=>x.id===c.colId);const statusLbl=stLbl(c.status).toLowerCase();const hay=[c.title,(c.descHTML||'').replace(/<[^>]+>/g,' '),...(c.tags||[]),c.status,statusLbl,col?col.title:''].join(' ').toLowerCase();el.classList.toggle('c-fade',!hay.includes(sq));});}
 
 // ── RICH TEXT ──
 let _rST=null;
@@ -596,6 +620,29 @@ function reKey(e){
     if(li&&li.textContent.trim()===''){e.preventDefault();document.execCommand('outdent',false,null);}
   }
 }
+function toggleColorPicker(){const p=document.getElementById('txt-color-picker');p.style.display=p.style.display==='none'||!p.style.display?'flex':'none';}
+function applyTextColor(c){document.getElementById('mdesc').focus();document.execCommand('foreColor',false,c);document.getElementById('txt-color-picker').style.display='none';}
+document.addEventListener('click',e=>{const p=document.getElementById('txt-color-picker');if(p&&!e.target.closest('#clr-btn')&&!e.target.closest('#txt-color-picker'))p.style.display='none';});
+
+// PDF upload
+function upPDFs(e){
+  const card=S.cards.find(x=>x.id===editId);if(!card)return;
+  if(!card.pdfs)card.pdfs=[];
+  [...e.target.files].forEach(f=>{
+    const r=new FileReader();r.onload=ev=>{
+      card.pdfs.push({name:f.name,url:ev.target.result});
+      saveAll();renderMPDFs(card);renderK();
+    };r.readAsDataURL(f);
+  });
+}
+function renderMPDFs(card){
+  const w=document.getElementById('mpdfs');if(!w)return;
+  w.innerHTML=(card.pdfs||[]).map((p,i)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+    <a href="${p.url}" target="_blank" style="font-size:12px;color:var(--accent);font-family:var(--font);text-decoration:none;">📄 ${esc(p.name)}</a>
+    <button onclick="rmPDF(${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;">✕</button>
+  </div>`).join('');
+}
+function rmPDF(i){const card=S.cards.find(x=>x.id===editId);if(!card)return;card.pdfs.splice(i,1);saveAll();renderMPDFs(card);renderK();}
 function saveRich(){clearTimeout(_rST);_rST=setTimeout(()=>{const c=S.cards.find(x=>x.id===editId);if(c){c.descHTML=document.getElementById('mdesc').innerHTML;saveAll();renderK();}},400);}
 function reMS(cmd){document.getElementById('msdesc').focus();document.execCommand(cmd,false,null);}
 function reBulletMS(){document.getElementById('msdesc').focus();document.execCommand('insertUnorderedList',false,null);}
@@ -640,23 +687,23 @@ function toggleSD(id){colSD[id]=!(colSD[id]!==false);saveAll();renderK();}
 function cardH(c){
   const doneC=c.checks.filter(x=>x.done).length,total=c.checks.length;
   const tagH=(c.tags||[]).map(t=>{const p=getTag(t);return`<span class="ctag" style="background:${p.bg};color:${p.color}">${t}</span>`;}).join('');
-  const imgH=(!c.bodyHidden&&c.images&&c.images.length)?`<img class="card-img" src="${c.images[0]}" alt="">`:'';
-  const prev=descPrev(c.descHTML||'');const isDone=c.status==='done';
-  const hasBody=!!(prev||(c.images&&c.images.length));
-  const ti=c.bodyHidden?'⊕':'⊖';const tl=c.bodyHidden?'mostrar':'ocultar';
-  // card bg tint
-  const bgS=c.cardTint&&c.cardTint!==''?`background:${c.cardTint}`:'' ;
-  const tagRow=`<div class="tag-row">
-    <div class="tags-wrap">${tagH}</div>
-    ${hasBody?`<button class="card-eye" onclick="toggleEye(event,'${c.id}')"><span class="eye-lbl">${tl}</span>${ti}</button>`:''}
-  </div>`;
+  const isDone=c.status==='done';
+  const bgS=c.cardTint&&c.cardTint!==''?`background:${c.cardTint}`:'';
+  const tagRow=`<div class="tag-row"><div class="tags-wrap">${tagH}</div></div>`;
+  // Show full rich content in card (no truncation, no hidden)
+  const descBlock=c.descHTML?`<div class="card-preview" style="-webkit-line-clamp:unset;overflow:visible;">${c.descHTML}</div>`:'';
+  // Checklist preview
+  const chkBlock=total?`<div class="card-chklist">${(c.checks||[]).map(ch=>`<div class="card-chk-item${ch.done?' done':''}"><span class="card-chk-box">${ch.done?'✓':'○'}</span> ${esc(ch.text)}</div>`).join('')}</div>`:'';
+  // Images
+  const imgH=(c.images&&c.images.length)?`<img class="card-img" src="${c.images[0]}" alt="">`:'';
+  // PDFs
+  const pdfH=(c.pdfs&&c.pdfs.length)?c.pdfs.map(p=>`<div class="card-pdf-thumb" onclick="event.stopPropagation();window.open('${p.url}','_blank')">📄 ${esc(p.name)}</div>`).join(''):'';
   return`<div class="card${isDone?' done-card':''}" id="card-${c.id}" data-card-id="${c.id}" draggable="true" style="${bgS}" onclick="openM('${c.id}')">
     ${c.color&&c.color!==''?`<div class="card-bar" style="background:${c.color}"></div>`:''}
     ${tagRow}
     <div class="card-title">${esc(c.title)}</div>
-    ${(!c.bodyHidden&&prev)?`<div class="card-preview">${esc(prev)}</div>`:''}
-    ${imgH}
-    <div class="card-meta"><span class="cst s-${c.status==='pending'?'pend':c.status==='progress'?'prog':c.status==='done'?'done':'blk'}">${stLbl(c.status)}</span>${total?`<span class="card-chk">${doneC}/${total}</span>`:''}</div>
+    ${descBlock}${chkBlock}${imgH}${pdfH}
+    <div class="card-meta"><span class="cst s-${c.status==='pending'?'pend':c.status==='progress'?'prog':c.status==='done'?'done':'blk'}">${stLbl(c.status)}</span>${total?`<span class="card-chk-count">${doneC}/${total}</span>`:''}</div>
   </div>`;
 }
 function toggleEye(e,id){e.stopPropagation();const c=S.cards.find(x=>x.id===id);if(c){c.bodyHidden=!c.bodyHidden;saveAll();renderK();}}
@@ -752,7 +799,7 @@ function openM(id){
   // Clear date errors
   ['mds-err','mde-err'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   tintMode='dot'; // kept for legacy, no-op now
-  renderMTags(card);renderChks(card);renderMImgs(card);refreshCC(card);
+  renderMTags(card);renderChks(card);renderMImgs(card);renderMPDFs(card);refreshCC(card);
   document.getElementById('mmv').innerHTML=S.cols.map(c=>`<option value="${c.id}"${c.id===card.colId?' selected':''}>${c.title}</option>`).join('');
   document.getElementById('mo').classList.add('open');
 }
