@@ -349,7 +349,6 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
   <button class="tb-btn" onclick="openTE()">🏷 Etiquetas</button>
   <button class="tb-btn" onclick="showAddColPop()">+ Columna</button>
   <span id="sync-indicator"></span>
-  <button class="tb-btn primary" id="savebtn" onclick="saveAll()">💾 Guardar</button>
   <div id="auth-user-info"></div>
 </div>
 
@@ -1200,7 +1199,7 @@ async function saveAll(){
   }catch(e){
     setSyncIndicator('local');
   }
-  const b=document.getElementById('savebtn');b.textContent='✓ Guardado';setTimeout(()=>b.textContent='💾 Guardar',1400);
+  // autosave - no button needed
 }
 
 function setSyncIndicator(state){
