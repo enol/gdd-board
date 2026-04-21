@@ -214,10 +214,12 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 #msb{width:206px;border-left:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;background:var(--bg2);}
 .mst{font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-family:var(--mono);}
 /* Tag chips with progress tick */
-.ctag-prog{font-size:9px;font-weight:700;padding:2px 7px 2px 4px;border-radius:4px;letter-spacing:.5px;font-family:var(--mono);display:inline-flex;align-items:center;gap:4px;user-select:none;}
-.ctag-prog.done{opacity:.6;text-decoration:line-through;}
-.ctag-tick{cursor:pointer;font-size:10px;min-width:14px;text-align:center;font-family:var(--mono);padding:1px 2px;border-radius:3px;transition:background .1s;}
-.ctag-tick:hover{background:rgba(0,0,0,.1);}
+.ctag-prog{font-size:9px;font-weight:700;padding:2px 4px 2px 7px;border-radius:4px;letter-spacing:.5px;font-family:var(--mono);display:inline-flex;align-items:center;gap:5px;user-select:none;}
+.ctag-prog.done{opacity:.55;}
+.ctag-prog.done .ctag-label-text{text-decoration:line-through;}
+.ctag-tick{cursor:pointer;width:13px;height:13px;border-radius:2px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0;background:rgba(255,255,255,.5);transition:background .1s;order:1;}
+.ctag-tick:hover{background:rgba(0,0,0,.08);}
+.ctag-tick.on{background:currentColor;color:#fff;border-color:currentColor;}
 /* Modal tag checkboxes */
 #mtags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
 .mtag-chk{font-size:10px;font-weight:700;padding:4px 6px 4px 8px;border-radius:6px;font-family:var(--mono);border:1.5px solid;display:inline-flex;align-items:center;gap:4px;user-select:none;}
@@ -717,10 +719,10 @@ function cardH(c){
     const active=activeTags.includes(t.label);
     if(!active)return'';
     const checked=c.tagChecks[t.label];
-    const bg=hex2rgba(t.color,.15);
-    return`<span class="ctag-prog${checked?' done':''}" style="background:${bg};color:${t.color};border:1.5px solid ${t.color}${checked?'':'60'};">
-      <span class="ctag-tick" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')" title="Marcar como hecho">${checked?'✓':'○'}</span>
-      ${t.label}
+    const bg=hex2rgba(t.color,.13);
+    return`<span class="ctag-prog${checked?' done':''}" style="background:${bg};color:${t.color};border:1.5px solid ${t.color}${checked?'':'55'};">
+      <span class="ctag-label-text">${t.label}</span>
+      <span class="ctag-tick${checked?' on':''}" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')">${checked?'✓':''}</span>
     </span>`;
   }).join('');
   const isDone=c.status==='done';
@@ -1012,18 +1014,43 @@ function rmImg(i){const c=S.cards.find(x=>x.id===editId);if(!c)return;c.images.s
 
 // ── DASHBOARD ──
 function renderDash(){
-  const p=document.getElementById('dash');const tot=S.cards.length;const done=S.cards.filter(c=>c.status==='done').length;const prog=S.cards.filter(c=>c.status==='progress').length;const blk=S.cards.filter(c=>c.status==='blocked').length;const pnd=S.cards.filter(c=>c.status==='pending').length;const pct=tot?Math.round(done/tot*100):0;
-  const cb=S.cols.map(col=>{const cc=S.cards.filter(c=>c.colId===col.id);const cd=cc.filter(c=>c.status==='done').length;const cp=cc.length?Math.round(cd/cc.length*100):0;return`<div class="dbr"><div class="dbl"><span>${esc(col.title)}</span><span style="color:${col.color||'#888'}">${cp}%</span></div><div class="dbt"><div class="dbf" style="width:${cp}%;background:${col.color||'var(--accent)'}"></div></div></div>`;}).join('');
+  const p=document.getElementById('dash');
+  const tot=S.cards.length;
+  // A card is "done" if status=done OR all its active tags are ticked
+  const isDone=c=>{
+    if(c.status==='done')return true;
+    const tags=c.tags||[];
+    if(!tags.length)return false;
+    return tags.every(t=>c.tagChecks&&c.tagChecks[t]);
+  };
+  const done=S.cards.filter(isDone).length;
+  const prog=S.cards.filter(c=>!isDone(c)&&c.status==='progress').length;
+  const blk=S.cards.filter(c=>c.status==='blocked').length;
+  const pnd=S.cards.filter(c=>!isDone(c)&&c.status==='pending').length;
+  const pct=tot?Math.round(done/tot*100):0;
+  const cb=S.cols.map(col=>{
+    const cc=S.cards.filter(c=>c.colId===col.id);
+    const cd=cc.filter(isDone).length;
+    const cp=cc.length?Math.round(cd/cc.length*100):0;
+    return`<div class="dbr"><div class="dbl"><span>${esc(col.title)}</span><span style="color:${col.color||'#888'}">${cp}%</span></div><div class="dbt"><div class="dbf" style="width:${cp}%;background:${col.color||'var(--accent)'}"></div></div></div>`;
+  }).join('');
   const tb=S.tags.map(t=>{
     const tc=S.cards.filter(c=>(c.tags||[]).includes(t.label));
     if(!tc.length)return'';
-    const td=tc.filter(c=>c.status==='done').length;
+    // Progress for this tag: how many cards have this tag ticked
+    const td=tc.filter(c=>c.tagChecks&&c.tagChecks[t.label]).length;
     const tp=Math.round(td/tc.length*100);
     return`<div class="dbr"><div class="dbl"><span style="color:${t.color}">${t.label}</span><span>${tp}% (${td}/${tc.length})</span></div><div class="dbt"><div class="dbf" style="width:${tp}%;background:${t.color}"></div></div></div>`;
   }).join('');
   p.innerHTML=`<h2>ESTADO GLOBAL</h2><div class="ds"><div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;font-family:var(--mono)">COMPLETADO</div><div class="db">${pct}<span style="font-size:14px;color:var(--text-muted)">%</span></div><div class="dsub">${done} de ${tot} cards</div><div class="dbt" style="margin-top:7px"><div class="dbf" style="width:${pct}%;background:#1a9e74"></div></div><div class="dsg"><div class="dst"><div class="dstn" style="color:var(--text-muted)">${pnd}</div><div class="dstl">PEND.</div></div><div class="dst"><div class="dstn" style="color:var(--accent4)">${prog}</div><div class="dstl">EN CURSO</div></div><div class="dst"><div class="dstn" style="color:var(--accent3)">${done}</div><div class="dstl">LISTO</div></div><div class="dst"><div class="dstn" style="color:var(--accent2)">${blk}</div><div class="dstl">BLOQ.</div></div></div></div><h2>POR COLUMNA</h2><div class="ds">${cb}</div><h2>POR ETIQUETA</h2><div class="ds">${tb||'<div style="color:var(--text-dim);font-size:11px">Sin etiquetas</div>'}</div>`;
 }
-function renderTP(){const tot=S.cards.length;const done=S.cards.filter(c=>c.status==='done').length;const blk=S.cards.filter(c=>c.status==='blocked').length;const pct=tot?Math.round(done/tot*100):0;document.getElementById('topbar-progress').innerHTML=`<div class="prog-pill"><div class="dot" style="background:#1a9e74"></div>${pct}%</div>${blk?`<div class="prog-pill"><div class="dot" style="background:var(--accent2)"></div>${blk} bloq.</div>`:''}`;}
+function renderTP(){
+  const tot=S.cards.length;
+  const isDone=c=>c.status==='done'||((c.tags||[]).length>0&&(c.tags||[]).every(t=>c.tagChecks&&c.tagChecks[t]));
+  const done=S.cards.filter(isDone).length;
+  const blk=S.cards.filter(c=>c.status==='blocked').length;
+  const pct=tot?Math.round(done/tot*100):0;
+  document.getElementById('topbar-progress').innerHTML=`<div class="prog-pill"><div class="dot" style="background:#1a9e74"></div>${pct}%</div>${blk?`<div class="prog-pill"><div class="dot" style="background:var(--accent2)"></div>${blk} bloq.</div>`:''}`;}
 
 // ── GANTT ──
 let gWeeks=[];
