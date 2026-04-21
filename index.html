@@ -1236,12 +1236,24 @@ function renderUserInfo(user){
 async function loadData(){
   // Try cloud first
   try{
-    const{data,error}=await sb.from('gdd_boards').select('data').eq('id',BOARD_ID).single();
-    if(!error&&data&&data.data){S=data.data;if(!S.tags)S.tags=DEF_TAGS;if(!S.ms)S.ms=[];colSD=data.colSD||{};return;}
-  }catch(e){}
+    const{data,error}=await sb.from('gdd_boards').select('data,colSD').eq('id',BOARD_ID).single();
+    if(!error&&data&&data.data){
+      S=data.data;
+      if(!S.tags)S.tags=DEF_TAGS;
+      if(!S.ms)S.ms=[];
+      colSD=data.colSD||{};
+      console.log('✓ Datos cargados desde Supabase');
+      return;
+    }
+    console.log('Supabase sin datos todavía, error:', error);
+  }catch(e){console.log('Error Supabase:', e);}
   // Fallback to localStorage
-  try{const d=localStorage.getItem('gdd-v6');if(d){const p=JSON.parse(d);S=p.S||p;colSD=p.colSD||{};}else{S=defData();}if(!S.tags)S.tags=DEF_TAGS;if(!S.ms)S.ms=[];}
-  catch(e){S=defData();}
+  try{
+    const d=localStorage.getItem('gdd-v6');
+    if(d){const p=JSON.parse(d);S=p.S||p;colSD=p.colSD||{};console.log('✓ Datos cargados desde localStorage');}
+    else{S=defData();console.log('Sin datos, cargando demo');}
+    if(!S.tags)S.tags=DEF_TAGS;if(!S.ms)S.ms=[];
+  }catch(e){S=defData();}
 }
 
 async function saveAll(){
