@@ -213,8 +213,11 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 #mmain{flex:1;padding:14px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
 #msb{width:206px;border-left:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;background:var(--bg2);}
 .mst{font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-family:var(--mono);}
-#mtags{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
-.mtag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;font-family:var(--mono);cursor:pointer;letter-spacing:.3px;}
+#mtags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.mtag-chk{font-size:10px;font-weight:700;padding:4px 10px 4px 8px;border-radius:6px;font-family:var(--mono);cursor:pointer;letter-spacing:.3px;border:1.5px solid;display:flex;align-items:center;gap:5px;transition:all .15s;user-select:none;}
+.mtag-chk:hover{filter:brightness(.93);}
+.mtag-box{width:12px;height:12px;border-radius:3px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0;background:rgba(255,255,255,.3);}
+.mtag-chk.on .mtag-box{background:rgba(255,255,255,.4);}
 /* rich editor */
 .rbar{display:flex;gap:4px;margin-bottom:4px;}
 .rbtn{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:12px;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:var(--font);font-weight:700;line-height:1.4;}
@@ -416,11 +419,8 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
           <button class="rbtn" onclick="re('italic')" title="Ctrl+I"><i>I</i></button>
           <button class="rbtn" onclick="reBullet()">•&nbsp;Lista</button>
           <div style="position:relative;display:inline-block;">
-            <button class="rbtn" onclick="toggleColorPicker()" title="Color de texto" id="clr-btn">A▾</button>
-            <div id="txt-color-picker" style="display:none;position:absolute;top:30px;left:0;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;box-shadow:var(--shadow-lg);display:flex;flex-wrap:wrap;gap:4px;width:160px;">
-              ${TEXT_COLORS.map(c=>`<div style="width:20px;height:20px;border-radius:4px;background:${c};cursor:pointer;border:2px solid transparent;" onmousedown="event.preventDefault();applyTextColor('${c}')" title="${c}"></div>`).join('')}
-              <div style="width:20px;height:20px;border-radius:4px;background:var(--text);cursor:pointer;border:2px solid transparent;" onmousedown="event.preventDefault();re('removeFormat')" title="Quitar color">✕</div>
-            </div>
+            <button class="rbtn" onclick="toggleColorPicker(event)" id="clr-btn">A▾</button>
+            <div id="txt-color-picker" style="display:none;position:absolute;top:30px;left:0;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;box-shadow:var(--shadow-lg);flex-wrap:wrap;gap:4px;width:168px;"></div>
           </div>
         </div>
         <div id="mdesc" class="reditor" contenteditable="true" data-ph="Notas de diseño, contexto…"
@@ -533,8 +533,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 // ── CONSTANTS ──
 // Palette update: add dark grey #5D667D to all color arrays
 const DOT_COLORS  =['','#5D667D','#888888','#c0922a','#2e9e5a','#2980b9','#c0392b','#7d5cbf','#d97028'];
-const TINT_COLORS =['','#e4e6eb','#e8e8e8','#fdf5dc','#e2f5ea','#dceefb','#fde8e8','#ede5f7','#fdeee0'];
-const COL_BG_COLORS=['','#e4e6eb','#e8e8e8','#fdf5dc','#e2f5ea','#dceefb','#fde8e8','#ede5f7','#fdeee0'];
+// Palette defined after TEXT_COLORS below
 // Text colors for rich editor (same as DOT but without empty)
 const TEXT_COLORS=['#5D667D','#888888','#c0922a','#2e9e5a','#2980b9','#c0392b','#7d5cbf','#d97028','#1a1814'];
 const TAG_PAL=['#2ecc71','#3498db','#9b59b6','#e67e22','#e74c3c','#f1c40f','#16a085','#e91e8c','#ff5722','#607d8b','#795548','#f06292','#ffeb3b','#ff5252','#ea80fc','#ffd740','#00bcd4','#ef5350'];
@@ -623,7 +622,22 @@ function reKey(e){
     if(li&&li.textContent.trim()===''){e.preventDefault();document.execCommand('outdent',false,null);}
   }
 }
-function toggleColorPicker(){const p=document.getElementById('txt-color-picker');p.style.display=p.style.display==='none'||!p.style.display?'flex':'none';}
+// Dark grey pastel for column bg (visibly darker than the others)
+const COL_BG_COLORS=['','#c8cad0','#e8e8e8','#fdf5dc','#e2f5ea','#dceefb','#fde8e8','#ede5f7','#fdeee0'];
+const TINT_COLORS  =['','#c8cad0','#e8e8e8','#fdf5dc','#e2f5ea','#dceefb','#fde8e8','#ede5f7','#fdeee0'];
+
+function toggleColorPicker(e){
+  e.stopPropagation();
+  const p=document.getElementById('txt-color-picker');
+  if(p.style.display==='flex'){p.style.display='none';return;}
+  // Populate on first open
+  if(!p.dataset.built){
+    p.innerHTML=TEXT_COLORS.map(c=>`<div style="width:20px;height:20px;border-radius:4px;background:${c};cursor:pointer;border:2px solid transparent;flex-shrink:0;" onmousedown="event.preventDefault();applyTextColor('${c}')"></div>`).join('')
+      +`<div style="width:20px;height:20px;border-radius:4px;background:#f0ede8;border:1.5px solid #ccc;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;flex-shrink:0;" onmousedown="event.preventDefault();document.getElementById('mdesc').focus();document.execCommand('removeFormat',false,null);document.getElementById('txt-color-picker').style.display='none'">✕</div>`;
+    p.dataset.built='1';
+  }
+  p.style.display='flex';
+}
 function applyTextColor(c){document.getElementById('mdesc').focus();document.execCommand('foreColor',false,c);document.getElementById('txt-color-picker').style.display='none';}
 document.addEventListener('click',e=>{const p=document.getElementById('txt-color-picker');if(p&&!e.target.closest('#clr-btn')&&!e.target.closest('#txt-color-picker'))p.style.display='none';});
 
@@ -888,7 +902,14 @@ function refreshCC(card){
 }
 
 // ── TAGS ──
-function renderMTags(card){const w=document.getElementById('mtags');const act=(card.tags||[]).map(t=>{const p=getTag(t);return`<span class="mtag" style="background:${p.bg};color:${p.color};border:1px solid ${p.color}40" onclick="rmTag('${t}')">${t} ✕</span>`;}).join('');const inact=S.tags.filter(p=>!(card.tags||[]).includes(p.label)).map(p=>`<span class="mtag" style="background:${p.bg};color:${p.color};opacity:.35;border:1px dashed ${p.color}60" onclick="addTagToCard('${p.label}')">${p.label} +</span>`).join('');w.innerHTML=act+inact;}
+function renderMTags(card){
+  const w=document.getElementById('mtags');
+  w.innerHTML=S.tags.map(t=>{
+    const active=(card.tags||[]).includes(t.label);
+    return`<div class="mtag-chk${active?' on':''}" style="border-color:${t.color};color:${active?'#fff':t.color};background:${active?t.color:t.color+'18'};" onclick="toggleTag('${t.label}')"><span class="mtag-box">${active?'✓':''}</span>${t.label}</div>`;
+  }).join('');
+}
+function toggleTag(lbl){const c=S.cards.find(x=>x.id===editId);if(!c)return;if(!c.tags)c.tags=[];if(c.tags.includes(lbl))c.tags=c.tags.filter(x=>x!==lbl);else c.tags.push(lbl);saveAll();renderMTags(c);renderK();}
 function addTagToCard(t){const c=S.cards.find(x=>x.id===editId);if(!c.tags)c.tags=[];if(!c.tags.includes(t))c.tags.push(t);saveAll();renderMTags(c);renderK();}
 function rmTag(t){const c=S.cards.find(x=>x.id===editId);if(!c.tags)return;c.tags=c.tags.filter(x=>x!==t);saveAll();renderMTags(c);renderK();}
 function openTE(){renderTE();document.getElementById('tep').classList.add('open');}
