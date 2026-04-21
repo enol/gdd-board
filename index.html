@@ -126,10 +126,13 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 .card-preview{font-size:11.5px;color:var(--text-muted);line-height:1.55;margin-bottom:5px;font-weight:400;font-family:var(--font);}
 .card-preview ul,.card-preview ol{padding-left:16px;margin:2px 0;}
 .card-preview li{margin:1px 0;}
-.card-chklist{display:flex;flex-direction:column;gap:2px;margin-bottom:5px;}
-.card-chk-item{font-size:11px;color:var(--text-muted);font-family:var(--font);display:flex;align-items:baseline;gap:5px;}
-.card-chk-item.done{text-decoration:line-through;opacity:.5;}
-.card-chk-box{font-size:10px;color:var(--text-dim);flex-shrink:0;}
+.card-chklist{display:flex;flex-direction:column;gap:3px;margin-bottom:5px;}
+.card-chk-item{font-size:11.5px;color:var(--text-muted);font-family:var(--font);display:flex;align-items:center;gap:6px;padding:2px 4px;border-radius:4px;cursor:pointer;transition:background .15s;user-select:none;}
+.card-chk-item:hover{background:rgba(0,0,0,.04);}
+.card-chk-item.done{text-decoration:line-through;opacity:.45;}
+.card-chk-box{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all .15s;}
+.card-chk-item:not(.done) .card-chk-box{background:#fff;}
+.card-chk-item.done .card-chk-box{background:var(--accent3);border-color:var(--accent3);color:#fff;}
 .card-chk-count{font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-left:auto;}
 .card-pdf-thumb{font-size:11px;color:var(--accent);font-family:var(--font);padding:3px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;cursor:pointer;margin-top:4px;display:inline-block;}
 .card-pdf-thumb:hover{background:var(--bg3);}
@@ -685,18 +688,18 @@ function renderK(){
 function toggleSD(id){colSD[id]=!(colSD[id]!==false);saveAll();renderK();}
 
 function cardH(c){
-  const doneC=c.checks.filter(x=>x.done).length,total=c.checks.length;
+  const doneC=(c.checks||[]).filter(x=>x.done).length,total=(c.checks||[]).length;
   const tagH=(c.tags||[]).map(t=>{const p=getTag(t);return`<span class="ctag" style="background:${p.bg};color:${p.color}">${t}</span>`;}).join('');
   const isDone=c.status==='done';
   const bgS=c.cardTint&&c.cardTint!==''?`background:${c.cardTint}`:'';
   const tagRow=`<div class="tag-row"><div class="tags-wrap">${tagH}</div></div>`;
-  // Show full rich content in card (no truncation, no hidden)
-  const descBlock=c.descHTML?`<div class="card-preview" style="-webkit-line-clamp:unset;overflow:visible;">${c.descHTML}</div>`:'';
-  // Checklist preview
-  const chkBlock=total?`<div class="card-chklist">${(c.checks||[]).map(ch=>`<div class="card-chk-item${ch.done?' done':''}"><span class="card-chk-box">${ch.done?'✓':'○'}</span> ${esc(ch.text)}</div>`).join('')}</div>`:'';
-  // Images
+  const descBlock=c.descHTML?`<div class="card-preview">${c.descHTML}</div>`:'';
+  // Clickable checklist directly on card
+  const chkBlock=total?`<div class="card-chklist">${(c.checks||[]).map((ch,i)=>`<div class="card-chk-item${ch.done?' done':''}" onclick="event.stopPropagation();toggleCardChk('${c.id}',${i})">
+    <div class="card-chk-box">${ch.done?'✓':''}</div>
+    <span>${esc(ch.text)}</span>
+  </div>`).join('')}</div>`:'';
   const imgH=(c.images&&c.images.length)?`<img class="card-img" src="${c.images[0]}" alt="">`:'';
-  // PDFs
   const pdfH=(c.pdfs&&c.pdfs.length)?c.pdfs.map(p=>`<div class="card-pdf-thumb" onclick="event.stopPropagation();window.open('${p.url}','_blank')">📄 ${esc(p.name)}</div>`).join(''):'';
   return`<div class="card${isDone?' done-card':''}" id="card-${c.id}" data-card-id="${c.id}" draggable="true" style="${bgS}" onclick="openM('${c.id}')">
     ${c.color&&c.color!==''?`<div class="card-bar" style="background:${c.color}"></div>`:''}
@@ -705,6 +708,18 @@ function cardH(c){
     ${descBlock}${chkBlock}${imgH}${pdfH}
     <div class="card-meta"><span class="cst s-${c.status==='pending'?'pend':c.status==='progress'?'prog':c.status==='done'?'done':'blk'}">${stLbl(c.status)}</span>${total?`<span class="card-chk-count">${doneC}/${total}</span>`:''}</div>
   </div>`;
+}
+
+// Toggle check directly from card — auto-completes card if all done
+function toggleCardChk(cardId, idx){
+  const card=S.cards.find(c=>c.id===cardId);if(!card||!card.checks[idx])return;
+  card.checks[idx].done=!card.checks[idx].done;
+  // Auto-complete: if all checks done → status = done; if any unchecked and was done → back to progress
+  const allDone=card.checks.length>0&&card.checks.every(c=>c.done);
+  const anyDone=card.checks.some(c=>c.done);
+  if(allDone){card.status='done';}
+  else if(card.status==='done'){card.status=anyDone?'progress':'pending';}
+  saveAll();renderK();
 }
 function toggleEye(e,id){e.stopPropagation();const c=S.cards.find(x=>x.id===id);if(c){c.bodyHidden=!c.bodyHidden;saveAll();renderK();}}
 
@@ -893,7 +908,15 @@ function chkDO(e,i){e.preventDefault();if(i===dCI)return;document.querySelectorA
 function chkDrop(e,to){e.preventDefault();if(dCI===null||dCI===to)return;const c=S.cards.find(x=>x.id===editId);if(!c)return;const[item]=c.checks.splice(dCI,1);c.checks.splice(to,0,item);saveAll();renderChks(c);}
 function chkDE(){dCI=null;document.querySelectorAll('.chki').forEach(el=>el.classList.remove('drag-ov'));}
 function addChk(){const c=S.cards.find(x=>x.id===editId);if(!c)return;const inp=document.getElementById('nchi');const text=inp.value.trim();if(!text)return;c.checks.push({text,done:false});inp.value='';saveAll();renderChks(c);}
-function toggleChk(i,v){const c=S.cards.find(x=>x.id===editId);if(!c)return;c.checks[i].done=v;saveAll();renderChks(c);renderK();}
+function toggleChk(i,v){
+  const c=S.cards.find(x=>x.id===editId);if(!c)return;
+  c.checks[i].done=v;
+  const allDone=c.checks.length>0&&c.checks.every(ch=>ch.done);
+  const anyDone=c.checks.some(ch=>ch.done);
+  if(allDone){c.status='done';document.getElementById('mstat').value='done';}
+  else if(c.status==='done'){c.status=anyDone?'progress':'pending';document.getElementById('mstat').value=c.status;}
+  saveAll();renderChks(c);renderK();
+}
 function delChk(i){const c=S.cards.find(x=>x.id===editId);if(!c)return;c.checks.splice(i,1);saveAll();renderChks(c);}
 
 // ── IMAGES ──
@@ -906,7 +929,13 @@ function rmImg(i){const c=S.cards.find(x=>x.id===editId);if(!c)return;c.images.s
 function renderDash(){
   const p=document.getElementById('dash');const tot=S.cards.length;const done=S.cards.filter(c=>c.status==='done').length;const prog=S.cards.filter(c=>c.status==='progress').length;const blk=S.cards.filter(c=>c.status==='blocked').length;const pnd=S.cards.filter(c=>c.status==='pending').length;const pct=tot?Math.round(done/tot*100):0;
   const cb=S.cols.map(col=>{const cc=S.cards.filter(c=>c.colId===col.id);const cd=cc.filter(c=>c.status==='done').length;const cp=cc.length?Math.round(cd/cc.length*100):0;return`<div class="dbr"><div class="dbl"><span>${esc(col.title)}</span><span style="color:${col.color||'#888'}">${cp}%</span></div><div class="dbt"><div class="dbf" style="width:${cp}%;background:${col.color||'var(--accent)'}"></div></div></div>`;}).join('');
-  const tb=S.tags.map(t=>{const tc=S.cards.filter(c=>(c.tags||[]).includes(t.label));if(!tc.length)return'';const td=tc.filter(c=>c.status==='done').length;const tp=Math.round(td/tc.length*100);return`<div class="dbr"><div class="dbl"><span style="color:${t.color}">${t.label}</span><span>${tp}%</span></div><div class="dbt"><div class="dbf" style="width:${tp}%;background:${t.color}"></div></div></div>`;}).join('');
+  const tb=S.tags.map(t=>{
+    const tc=S.cards.filter(c=>(c.tags||[]).includes(t.label));
+    if(!tc.length)return'';
+    const td=tc.filter(c=>c.status==='done').length;
+    const tp=Math.round(td/tc.length*100);
+    return`<div class="dbr"><div class="dbl"><span style="color:${t.color}">${t.label}</span><span>${tp}% (${td}/${tc.length})</span></div><div class="dbt"><div class="dbf" style="width:${tp}%;background:${t.color}"></div></div></div>`;
+  }).join('');
   p.innerHTML=`<h2>ESTADO GLOBAL</h2><div class="ds"><div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;font-family:var(--mono)">COMPLETADO</div><div class="db">${pct}<span style="font-size:14px;color:var(--text-muted)">%</span></div><div class="dsub">${done} de ${tot} cards</div><div class="dbt" style="margin-top:7px"><div class="dbf" style="width:${pct}%;background:#1a9e74"></div></div><div class="dsg"><div class="dst"><div class="dstn" style="color:var(--text-muted)">${pnd}</div><div class="dstl">PEND.</div></div><div class="dst"><div class="dstn" style="color:var(--accent4)">${prog}</div><div class="dstl">EN CURSO</div></div><div class="dst"><div class="dstn" style="color:var(--accent3)">${done}</div><div class="dstl">LISTO</div></div><div class="dst"><div class="dstn" style="color:var(--accent2)">${blk}</div><div class="dstl">BLOQ.</div></div></div></div><h2>POR COLUMNA</h2><div class="ds">${cb}</div><h2>POR ETIQUETA</h2><div class="ds">${tb||'<div style="color:var(--text-dim);font-size:11px">Sin etiquetas</div>'}</div>`;
 }
 function renderTP(){const tot=S.cards.length;const done=S.cards.filter(c=>c.status==='done').length;const blk=S.cards.filter(c=>c.status==='blocked').length;const pct=tot?Math.round(done/tot*100):0;document.getElementById('topbar-progress').innerHTML=`<div class="prog-pill"><div class="dot" style="background:#1a9e74"></div>${pct}%</div>${blk?`<div class="prog-pill"><div class="dot" style="background:var(--accent2)"></div>${blk} bloq.</div>`:''}`;}
