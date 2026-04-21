@@ -213,11 +213,19 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 #mmain{flex:1;padding:14px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
 #msb{width:206px;border-left:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;background:var(--bg2);}
 .mst{font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-family:var(--mono);}
+/* Tag chips with progress tick */
+.ctag-prog{font-size:9px;font-weight:700;padding:2px 7px 2px 4px;border-radius:4px;letter-spacing:.5px;font-family:var(--mono);display:inline-flex;align-items:center;gap:4px;user-select:none;}
+.ctag-prog.done{opacity:.6;text-decoration:line-through;}
+.ctag-tick{cursor:pointer;font-size:10px;min-width:14px;text-align:center;font-family:var(--mono);padding:1px 2px;border-radius:3px;transition:background .1s;}
+.ctag-tick:hover{background:rgba(0,0,0,.1);}
+/* Modal tag checkboxes */
 #mtags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
-.mtag-chk{font-size:10px;font-weight:700;padding:4px 10px 4px 8px;border-radius:6px;font-family:var(--mono);cursor:pointer;letter-spacing:.3px;border:1.5px solid;display:flex;align-items:center;gap:5px;transition:all .15s;user-select:none;}
-.mtag-chk:hover{filter:brightness(.93);}
-.mtag-box{width:12px;height:12px;border-radius:3px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0;background:rgba(255,255,255,.3);}
-.mtag-chk.on .mtag-box{background:rgba(255,255,255,.4);}
+.mtag-chk{font-size:10px;font-weight:700;padding:4px 6px 4px 8px;border-radius:6px;font-family:var(--mono);border:1.5px solid;display:inline-flex;align-items:center;gap:4px;user-select:none;}
+.mtag-label{cursor:pointer;letter-spacing:.3px;}
+.mtag-label:hover{opacity:.8;}
+.mtag-box{width:16px;height:16px;border-radius:3px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;cursor:pointer;transition:all .15s;margin-left:2px;}
+.mtag-box:hover{background:rgba(0,0,0,.1);}
+.mtag-box.checked{background:currentColor;color:#fff;}
 /* rich editor */
 .rbar{display:flex;gap:4px;margin-bottom:4px;}
 .rbtn{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:12px;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:var(--font);font-weight:700;line-height:1.4;}
@@ -411,7 +419,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
   </div>
   <div id="mbody">
     <div id="mmain">
-      <div><div class="mst">Etiquetas</div><div id="mtags"></div></div>
+      <div><div class="mst">Etiquetas de progreso</div><div id="mtags"></div></div>
       <div>
         <div class="mst">Descripción</div>
         <div class="rbar">
@@ -702,14 +710,25 @@ function renderK(){
 function toggleSD(id){colSD[id]=!(colSD[id]!==false);saveAll();renderK();}
 
 function cardH(c){
-  const doneC=(c.checks||[]).filter(x=>x.done).length,total=(c.checks||[]).length;
-  const tagH=(c.tags||[]).map(t=>{const p=getTag(t);return`<span class="ctag" style="background:${p.bg};color:${p.color}">${t}</span>`;}).join('');
+  const activeTags=c.tags||[];
+  if(!c.tagChecks)c.tagChecks={};
+  // Tags: active ones shown with check state, inactive ones shown dimly
+  const tagH=S.tags.map(t=>{
+    const active=activeTags.includes(t.label);
+    if(!active)return'';
+    const checked=c.tagChecks[t.label];
+    const bg=hex2rgba(t.color,.15);
+    return`<span class="ctag-prog${checked?' done':''}" style="background:${bg};color:${t.color};border:1.5px solid ${t.color}${checked?'':'60'};">
+      <span class="ctag-tick" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')" title="Marcar como hecho">${checked?'✓':'○'}</span>
+      ${t.label}
+    </span>`;
+  }).join('');
   const isDone=c.status==='done';
   const bgS=c.cardTint&&c.cardTint!==''?`background:${c.cardTint}`:'';
-  const tagRow=`<div class="tag-row"><div class="tags-wrap">${tagH}</div></div>`;
   const descBlock=c.descHTML?`<div class="card-preview">${c.descHTML}</div>`:'';
-  // Clickable checklist directly on card
-  const chkBlock=total?`<div class="card-chklist">${(c.checks||[]).map((ch,i)=>`<div class="card-chk-item${ch.done?' done':''}" onclick="event.stopPropagation();toggleCardChk('${c.id}',${i})">
+  const checks=c.checks||[];
+  const doneC=checks.filter(x=>x.done).length,total=checks.length;
+  const chkBlock=total?`<div class="card-chklist">${checks.map((ch,i)=>`<div class="card-chk-item${ch.done?' done':''}" onclick="event.stopPropagation();toggleCardChk('${c.id}',${i})">
     <div class="card-chk-box">${ch.done?'✓':''}</div>
     <span>${esc(ch.text)}</span>
   </div>`).join('')}</div>`:'';
@@ -717,10 +736,10 @@ function cardH(c){
   const pdfH=(c.pdfs&&c.pdfs.length)?c.pdfs.map(p=>`<div class="card-pdf-thumb" onclick="event.stopPropagation();window.open('${p.url}','_blank')">📄 ${esc(p.name)}</div>`).join(''):'';
   return`<div class="card${isDone?' done-card':''}" id="card-${c.id}" data-card-id="${c.id}" draggable="true" style="${bgS}" onclick="openM('${c.id}')">
     ${c.color&&c.color!==''?`<div class="card-bar" style="background:${c.color}"></div>`:''}
-    ${tagRow}
+    ${tagH?`<div class="tag-row"><div class="tags-wrap">${tagH}</div></div>`:''}
     <div class="card-title">${esc(c.title)}</div>
     ${descBlock}${chkBlock}${imgH}${pdfH}
-    <div class="card-meta"><span class="cst s-${c.status==='pending'?'pend':c.status==='progress'?'prog':c.status==='done'?'done':'blk'}">${stLbl(c.status)}</span>${total?`<span class="card-chk-count">${doneC}/${total}</span>`:''}</div>
+    <div class="card-meta"><span class="cst s-${isDone?'done':c.status==='progress'?'prog':c.status==='blocked'?'blk':'pend'}">${stLbl(c.status)}</span>${total?`<span class="card-chk-count">${doneC}/${total}</span>`:''}</div>
   </div>`;
 }
 
@@ -904,12 +923,57 @@ function refreshCC(card){
 // ── TAGS ──
 function renderMTags(card){
   const w=document.getElementById('mtags');
-  w.innerHTML=S.tags.map(t=>{
+  if(!card.tagChecks)card.tagChecks={};
+  // Sort: active first, then alphabetical
+  const sorted=[...S.tags].sort((a,b)=>{
+    const aA=(card.tags||[]).includes(a.label);
+    const bA=(card.tags||[]).includes(b.label);
+    if(aA!==bA)return bA-aA;
+    return a.label.localeCompare(b.label);
+  });
+  w.innerHTML=sorted.map(t=>{
     const active=(card.tags||[]).includes(t.label);
-    return`<div class="mtag-chk${active?' on':''}" style="border-color:${t.color};color:${active?'#fff':t.color};background:${active?t.color:t.color+'18'};" onclick="toggleTag('${t.label}')"><span class="mtag-box">${active?'✓':''}</span>${t.label}</div>`;
+    const checked=active&&card.tagChecks[t.label];
+    const bg=active?hex2rgba(t.color,.18):'transparent';
+    const border=active?t.color:t.color+'50';
+    const textCol=active?t.color:t.color+'80';
+    return`<div class="mtag-chk${active?' on':''}" style="border-color:${border};color:${textCol};background:${bg};">
+      <span class="mtag-label" onclick="toggleTag('${t.label}')">${t.label}</span>
+      <span class="mtag-box${checked?' checked':''}" onclick="event.stopPropagation();tickTag('${t.label}')" title="${active?'Marcar como hecho':'Activa la etiqueta primero'}">${checked?'✓':active?'○':''}</span>
+    </div>`;
   }).join('');
 }
-function toggleTag(lbl){const c=S.cards.find(x=>x.id===editId);if(!c)return;if(!c.tags)c.tags=[];if(c.tags.includes(lbl))c.tags=c.tags.filter(x=>x!==lbl);else c.tags.push(lbl);saveAll();renderMTags(c);renderK();}
+function toggleTag(lbl){
+  const c=S.cards.find(x=>x.id===editId);if(!c)return;
+  if(!c.tags)c.tags=[];if(!c.tagChecks)c.tagChecks={};
+  if(c.tags.includes(lbl)){c.tags=c.tags.filter(x=>x!==lbl);delete c.tagChecks[lbl];}
+  else c.tags.push(lbl);
+  checkTagCompletion(c);saveAll();renderMTags(c);renderK();
+}
+function tickTag(lbl){
+  const c=S.cards.find(x=>x.id===editId);if(!c)return;
+  if(!(c.tags||[]).includes(lbl))return;
+  if(!c.tagChecks)c.tagChecks={};
+  c.tagChecks[lbl]=!c.tagChecks[lbl];
+  checkTagCompletion(c);saveAll();renderMTags(c);renderK();
+}
+function tickTagInline(cardId,lbl){
+  const c=S.cards.find(x=>x.id===cardId);if(!c)return;
+  if(!(c.tags||[]).includes(lbl))return;
+  if(!c.tagChecks)c.tagChecks={};
+  c.tagChecks[lbl]=!c.tagChecks[lbl];
+  checkTagCompletion(c);saveAll();renderK();
+}
+function checkTagCompletion(c){
+  const activeTags=c.tags||[];
+  if(!activeTags.length)return;
+  const allChecked=activeTags.every(t=>c.tagChecks&&c.tagChecks[t]);
+  if(allChecked){c.status='done';}
+  else if(c.status==='done'){
+    const anyChecked=activeTags.some(t=>c.tagChecks&&c.tagChecks[t]);
+    c.status=anyChecked?'progress':'pending';
+  }
+}
 function addTagToCard(t){const c=S.cards.find(x=>x.id===editId);if(!c.tags)c.tags=[];if(!c.tags.includes(t))c.tags.push(t);saveAll();renderMTags(c);renderK();}
 function rmTag(t){const c=S.cards.find(x=>x.id===editId);if(!c.tags)return;c.tags=c.tags.filter(x=>x!==t);saveAll();renderMTags(c);renderK();}
 function openTE(){renderTE();document.getElementById('tep').classList.add('open');}
