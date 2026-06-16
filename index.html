@@ -723,9 +723,10 @@ function cardH(c){
     if(!active)return'';
     const checked=c.tagChecks[t.label];
     const bg=hex2rgba(t.color,.13);
-    return`<span class="ctag-prog${checked?' done':''}" style="background:#fff;color:${t.color};border:2px solid ${t.color};">
+    const chipBg=checked?hex2rgba(t.color,.25):hex2rgba(t.color,.13);
+    return`<span class="ctag-prog${checked?' done':''}" style="background:${chipBg};color:${t.color};border:1.5px solid ${t.color}40;">
       <span class="ctag-label-text">${t.label}</span>
-      <span class="ctag-tick${checked?' on':''}" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')">${checked?'✓':''}</span>
+      <span class="ctag-tick${checked?' on':''}" style="border-color:${t.color};" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')">${checked?'✓':''}</span>
     </span>`;
   }).join('');
   const tags=c.tags||[];
