@@ -455,12 +455,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
       </div>
     </div>
     <div id="msb">
-      <div class="sbs"><div class="sbl">Estado</div>
-        <select id="mstat" class="msel" onchange="saveMF('status',this.value)">
-          <option value="pending">⬜ Pendiente</option><option value="progress">🟡 En curso</option>
-          <option value="done">🟢 Completado</option><option value="blocked">🔴 Bloqueado</option>
-        </select>
-      </div>
+
       <div class="sbs"><div class="sbl">Color card</div>
         <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-bottom:3px;letter-spacing:.5px;">▬ FONDO CARD</div>
         <div class="cprow" id="mcc-tint"></div>
@@ -728,7 +723,7 @@ function cardH(c){
     if(!active)return'';
     const checked=c.tagChecks[t.label];
     const bg=hex2rgba(t.color,.13);
-    return`<span class="ctag-prog${checked?' done':''}" style="background:${bg};color:${t.color};border:1.5px solid ${t.color}${checked?'':'55'};">
+    return`<span class="ctag-prog${checked?' done':''}" style="background:#fff;color:${t.color};border:2px solid ${t.color};">
       <span class="ctag-label-text">${t.label}</span>
       <span class="ctag-tick${checked?' on':''}" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')">${checked?'✓':''}</span>
     </span>`;
@@ -777,23 +772,24 @@ function cardDrop(e,colId){e.preventDefault();e.stopPropagation();document.query
 // ── COL DRAG ──
 let dragColId=null;
 function colDS(e){if(e.target.closest('.card,.add-card-btn,.col-more,.col-dot,input,.col-done-btn'))return;dragColId=e.currentTarget.dataset.colId;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('t','col');setTimeout(()=>{document.querySelector(`.col[data-col-id="${dragColId}"]`)?.classList.add('col-drag');},0);}
+let dragOverColId=null;
 function colDO(e){if(!dragColId)return;e.preventDefault();e.stopPropagation();
   document.querySelectorAll('.col-drop-line').forEach(l=>l.remove());
-  const col=e.currentTarget.closest('.col');
+  const col=e.target.closest('.col');
   if(col&&col.dataset.colId!==dragColId){
+    dragOverColId=col.dataset.colId;
     const line=document.createElement('div');line.className='col-drop-line';
     col.parentNode.insertBefore(line,col);
   }
 }
 function colDrop(e){e.preventDefault();e.stopPropagation();
   document.querySelectorAll('.col-drop-line').forEach(l=>l.remove());
-  const tgt=e.currentTarget.closest('.col');
-  if(!tgt||!dragColId||tgt.dataset.colId===dragColId){cleanup();return;}
-  const fi=S.cols.findIndex(c=>c.id===dragColId);const ti=S.cols.findIndex(c=>c.id===tgt.dataset.colId);
+  if(!dragOverColId||!dragColId||dragOverColId===dragColId){cleanup();return;}
+  const fi=S.cols.findIndex(c=>c.id===dragColId);const ti=S.cols.findIndex(c=>c.id===dragOverColId);
   if(fi>=0&&ti>=0){const[mv]=S.cols.splice(fi,1);S.cols.splice(ti,0,mv);}
-  cleanup();saveAll();renderK();
+  dragOverColId=null;cleanup();saveAll();renderK();
 }
-function cleanup(){dragColId=null;dragCId=null;document.querySelectorAll('.col-drag,.col-drag-over,.c-drag').forEach(el=>el.classList.remove('col-drag','col-drag-over','c-drag'));document.querySelectorAll('.drop-ind').forEach(d=>d.remove());}
+function cleanup(){dragColId=null;dragCId=null;dragOverColId=null;document.querySelectorAll('.col-drag,.col-drag-over,.c-drag').forEach(el=>el.classList.remove('col-drag','col-drag-over','c-drag'));document.querySelectorAll('.drop-ind').forEach(d=>d.remove());}
 window.addEventListener('dragend',cleanup);
 
 // ── POPUPS ──
@@ -965,20 +961,13 @@ function delCard(){if(!confirm('¿Eliminar esta card?'))return;S.cards=S.cards.f
 function pickDot(c){const card=S.cards.find(x=>x.id===editId);if(!card)return;card.color=c;const sc=c||card.cardTint||'';const strip=document.getElementById('mstrip');strip.style.background=sc||'transparent';strip.style.width=sc?'4px':'0';refreshCC(card);saveAll();renderK();}
 function pickTint(c){const card=S.cards.find(x=>x.id===editId);if(!card)return;card.cardTint=c;const sc=card.color||c||'';const strip=document.getElementById('mstrip');strip.style.background=sc||'transparent';strip.style.width=sc?'4px':'0';refreshCC(card);saveAll();renderK();}
 function refreshCC(card){
-  const dotW=document.getElementById('mcc-dot');
   const tintW=document.getElementById('mcc-tint');
-  if(!dotW||!tintW)return;
-  const ac=card.color||'';const at=card.cardTint||'';
-  // "sin color" swatch: never marked active (it's the neutral default, no highlight needed)
-  dotW.innerHTML=DOT_COLORS.map(c=>{
-    const isA=c!==''&&ac===c;
-    if(!c)return`<div class="csw" style="background:#fff;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:9px;color:#bbb;" title="Sin color" onclick="pickDot('')">✕</div>`;
-    return`<div class="csw${isA?' act':''}" style="background:${c}" onclick="pickDot('${c}')"></div>`;
-  }).join('');
-  tintW.innerHTML=TINT_COLORS.map(c=>{
-    const isA=c!==''&&at===c;
-    if(!c)return`<div class="csw" style="background:#fff;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:9px;color:#bbb;" title="Sin color" onclick="pickTint('')">✕</div>`;
-    return`<div class="csw${isA?' act':''}" style="background:${c}" onclick="pickTint('${c}')"></div>`;
+  if(!tintW)return;
+  const at=card.cardTint||'';
+  tintW.innerHTML=TINT_COLORS.map(col=>{
+    const isA=col!==''&&at===col;
+    if(!col)return`<div class="csw" style="background:#fff;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:9px;color:#bbb;" title="Sin color" onclick="pickTint('')">✕</div>`;
+    return`<div class="csw${isA?' act':''}" style="background:${col}" onclick="pickTint('${col}')"></div>`;
   }).join('');
 }
 
