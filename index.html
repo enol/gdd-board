@@ -698,7 +698,7 @@ function renderK(){
     const doneLbl=done.length?(showDone?`▲ Ocultar completadas (${done.length})`:`▼ Mostrar completadas (${done.length})`):'';
     el.innerHTML=`
       <div class="col-hdr" ondragstart="event.stopPropagation()">
-        <div class="col-dot" style="background:${col.colBg?darkenColor(col.colBg,0.45):(col.color||'#888')}" onclick="openColCP(event,'${col.id}')"></div>
+        <div class="col-dot" style="background:${col.colBg?darkenColor(col.colBg,0.20):(col.color||'#888')}" onclick="openColCP(event,'${col.id}')"></div>
         <input class="col-name" value="${esc(col.title)}" onchange="renameCol('${col.id}',this.value)" onclick="event.stopPropagation()" ondblclick="this.select();event.stopPropagation();" ondragstart="event.stopPropagation()" onfocus="this.select()">
         <span class="col-meta">${all.length} <span style="color:var(--text-dim)">(${pct}%)</span></span>
         <button class="col-more" onclick="showColMenu(event,'${col.id}')">⋯</button>
