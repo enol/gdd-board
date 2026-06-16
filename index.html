@@ -113,7 +113,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 .drop-ind{height:3px;background:var(--accent);border-radius:3px;margin:0 4px 4px;opacity:0;pointer-events:none;}
 .drop-ind.on{opacity:1;}
 /* colour bar at BOTTOM */
-.card-bar{position:absolute;bottom:0;left:0;right:0;height:3px;}
+/* card-bar removed */
 .tag-row{display:flex;align-items:center;gap:4px;margin-bottom:4px;}
 .tags-wrap{display:flex;flex-wrap:wrap;gap:3px;flex:1;}
 .ctag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.5px;font-family:var(--mono);}
@@ -139,8 +139,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 .card-pdf-thumb:hover{background:var(--bg3);}
 .card-meta{display:flex;align-items:center;gap:7px;margin-bottom:2px;}
 /* STATUS: no fill, coloured outline, dark text */
-.cst{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;font-family:var(--mono);letter-spacing:.4px;background:transparent;color:#4a4540;}
-.s-pend{border:1.5px solid #9a9080;}.s-prog{border:1.5px solid #c07a10;}.s-done{border:1.5px solid #1a9e74;}.s-blk{border:1.5px solid #d94f6e;}
+/* status badges removed */
 .card-chk{font-size:10px;color:var(--text-muted);font-family:var(--mono);margin-left:auto;}
 .card-img{width:100%;height:72px;object-fit:cover;border-radius:5px;margin-top:7px;}
 .card.done-card{opacity:.3;}.card.done-card .card-title{text-decoration:line-through;color:var(--text-muted);}
@@ -460,8 +459,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
         </select>
       </div>
       <div class="sbs"><div class="sbl">Color card</div>
-        <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);margin-bottom:3px;letter-spacing:.5px;">― LÍNEA (intenso)</div>
-        <div class="cprow" id="mcc-dot"></div>
+
         <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);margin:6px 0 3px;letter-spacing:.5px;">▬ FONDO CARD (pastel)</div>
         <div class="cprow" id="mcc-tint"></div>
       </div>
@@ -482,9 +480,10 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 <div class="cpop" id="acp" onclick="cpOut('acp',event)">
   <div class="cpbox"><h3>Nueva card</h3>
     <input id="acpi" class="cpinp" type="text" placeholder="Título…" onkeydown="if(event.key==='Enter')confirmAC();if(event.key==='Escape')cpClose('acp')">
-    <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.5px;margin-bottom:4px;">― LÍNEA (intenso)</div>
-    <div id="acp-dots" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div>
-    <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.5px;margin-bottom:4px;">▬ FONDO CARD (pastel)</div>
+    <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.5px;margin-bottom:5px;">ETIQUETAS DE PROGRESO <span style="color:var(--accent2)">*obligatorio</span></div>
+    <div id="acp-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;"></div>
+    <div id="acp-tag-err" style="display:none;font-size:10px;color:#c0392b;font-family:var(--mono);margin-bottom:6px;">Selecciona al menos una etiqueta</div>
+    <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.5px;margin-bottom:4px;margin-top:6px;">▬ FONDO CARD (pastel)</div>
     <div id="acp-tints" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;"></div>
     <div class="cpbtns"><button class="cpb" onclick="cpClose('acp')">Cancelar</button><button class="cpb ok" onclick="confirmAC()">Añadir</button></div>
   </div>
@@ -543,7 +542,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 <script>
 // ── CONSTANTS ──
 // Palette update: add dark grey #5D667D to all color arrays
-const DOT_COLORS  =['','#5D667D','#888888','#c0922a','#2e9e5a','#2980b9','#c0392b','#7d5cbf','#d97028'];
+const DOT_COLORS  =[]; // removed - line color eliminated
 // Palette defined after TEXT_COLORS below
 // Text colors for rich editor (same as DOT but without empty)
 const TEXT_COLORS=['#5D667D','#888888','#c0922a','#2e9e5a','#2980b9','#c0392b','#7d5cbf','#d97028','#1a1814'];
@@ -681,8 +680,14 @@ function descPrev(html){if(!html)return'';const d=document.createElement('div');
 function renderK(){
   const inner=document.getElementById('ki');inner.innerHTML='';
   S.cols.forEach(col=>{
+    const isDoneCard=cd=>{
+      const tags=cd.tags||[];
+      if(tags.length&&tags.every(t=>cd.tagChecks&&cd.tagChecks[t]))return true;
+      if(!tags.length&&cd.status==='done')return true;
+      return false;
+    };
     const all=S.cards.filter(c=>c.colId===col.id);
-    const active=all.filter(c=>c.status!=='done');const done=all.filter(c=>c.status==='done');
+    const active=all.filter(c=>!isDoneCard(c));const done=all.filter(c=>isDoneCard(c));
     const showDone=colSD[col.id]!==false;
     const pct=all.length?Math.round(done.length/all.length*100):0;
     const el=document.createElement('div');el.className='col';el.dataset.colId=col.id;el.draggable=true;
@@ -726,7 +731,8 @@ function cardH(c){
       <span class="ctag-tick${checked?' on':''}" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')">${checked?'✓':''}</span>
     </span>`;
   }).join('');
-  const isDone=c.status==='done';
+  const tags=c.tags||[];
+  const isDone=(tags.length&&tags.every(t=>c.tagChecks&&c.tagChecks[t]))||(tags.length===0&&c.status==='done');
   const bgS=c.cardTint&&c.cardTint!==''?`background:${c.cardTint}`:'';
   const descBlock=c.descHTML?`<div class="card-preview">${c.descHTML}</div>`:'';
   const checks=c.checks||[];
@@ -739,12 +745,12 @@ function cardH(c){
   const pdfH=(c.pdfs&&c.pdfs.length)?c.pdfs.map(p=>`<div class="card-pdf-thumb" onclick="event.stopPropagation();window.open('${p.url}','_blank')">📄 ${esc(p.name)}</div>`).join(''):'';
   const hasBody=!!(c.descHTML||c.checks?.length||c.images?.length||c.pdfs?.length);
   return`<div class="card${isDone?' done-card':''}" id="card-${c.id}" data-card-id="${c.id}" draggable="true" style="${bgS}" onclick="openM('${c.id}')">
-    ${c.color&&c.color!==''?`<div class="card-bar" style="background:${c.color}"></div>`:''}
+    
     ${tagH?`<div class="tag-row"><div class="tags-wrap">${tagH}</div></div>`:''}
     <div class="card-title">${esc(c.title)}</div>
     ${!c.bodyHidden?descBlock:''}${!c.bodyHidden?chkBlock:''}${!c.bodyHidden?imgH:''}${!c.bodyHidden?pdfH:''}
     <div class="card-meta">
-      <span class="cst s-${isDone?'done':c.status==='progress'?'prog':c.status==='blocked'?'blk':'pend'}">${stLbl(c.status)}</span>
+      
       ${total?`<span class="card-chk-count">${doneC}/${total}</span>`:''}
       ${hasBody?`<button class="card-eye" onclick="event.stopPropagation();toggleEye(event,'${c.id}')"><span class="eye-lbl">${c.bodyHidden?'mostrar':'ocultar'}</span>${c.bodyHidden?'⊕':'⊖'}</button>`:''}
     </div>
@@ -755,11 +761,7 @@ function cardH(c){
 function toggleCardChk(cardId, idx){
   const card=S.cards.find(c=>c.id===cardId);if(!card||!card.checks[idx])return;
   card.checks[idx].done=!card.checks[idx].done;
-  // Auto-complete: if all checks done → status = done; if any unchecked and was done → back to progress
-  const allDone=card.checks.length>0&&card.checks.every(c=>c.done);
-  const anyDone=card.checks.some(c=>c.done);
-  if(allDone){card.status='done';}
-  else if(card.status==='done'){card.status=anyDone?'progress':'pending';}
+  // Internal checks are tracking only - do NOT auto-complete the card
   saveAll();renderK();
 }
 function toggleEye(e,id){e.stopPropagation();const c=S.cards.find(x=>x.id===id);if(c){c.bodyHidden=!c.bodyHidden;saveAll();renderK();}}
@@ -781,20 +783,42 @@ window.addEventListener('dragend',cleanup);
 // ── POPUPS ──
 function cpOut(id,e){if(e.target===document.getElementById(id))cpClose(id);}
 function cpClose(id){document.getElementById(id).classList.remove('open');}
-let acpDot='',acpTint='';
+let acpTags=[],acpTint='';
 function showACP(colId){
-  pendAC=colId;acpDot='';acpTint='';
+  pendAC=colId;acpTags=[];acpTint='';
   document.getElementById('acp').classList.add('open');
-  const i=document.getElementById('acpi');i.value='';setTimeout(()=>i.focus(),50);
+  const i=document.getElementById('acpi');i.value='';
+  const err=document.getElementById('acp-tag-err');if(err)err.style.display='none';
+  setTimeout(()=>i.focus(),50);
   renderACPColors();
 }
 function renderACPColors(){
-  const dotW=document.getElementById('acp-dots');
+  // Tag selector
+  const tagW=document.getElementById('acp-tags');
+  if(tagW)tagW.innerHTML=S.tags.map(t=>{
+    const on=acpTags.includes(t.label);
+    return`<div onclick="acpToggleTag('${t.label}')" style="font-size:10px;font-weight:700;font-family:var(--mono);padding:3px 9px;border-radius:5px;border:1.5px solid ${t.color};background:${on?t.color:'transparent'};color:${on?'#fff':t.color};cursor:pointer;transition:all .15s;">${t.label}</div>`;
+  }).join('');
+  // Tint swatches
   const tintW=document.getElementById('acp-tints');
-  dotW.innerHTML=DOT_COLORS.map(c=>{if(!c)return`<div class="csw" style="background:#fff;border:1.5px solid #ddd;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#bbb;" onclick="acpDot='';renderACPColors()">✕</div>`;const isA=c!==''&&acpDot===c;return`<div class="csw${isA?' act':''}" style="background:${c};width:18px;height:18px;" onclick="acpDot='${c}';renderACPColors()"></div>`;}).join('');
-  tintW.innerHTML=TINT_COLORS.map(c=>{if(!c)return`<div class="csw" style="background:#fff;border:1.5px solid #ddd;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#bbb;" onclick="acpTint='';renderACPColors()">✕</div>`;const isA=c!==''&&acpTint===c;return`<div class="csw${isA?' act':''}" style="background:${c};width:18px;height:18px;" onclick="acpTint='${c}';renderACPColors()"></div>`;}).join('');
+  if(tintW)tintW.innerHTML=TINT_COLORS.map(c=>{if(!c)return`<div class="csw" style="background:#fff;border:1.5px solid #ddd;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#bbb;" onclick="acpTint='';renderACPColors()">✕</div>`;const isA=c!==''&&acpTint===c;return`<div class="csw${isA?' act':''}" style="background:${c};width:18px;height:18px;" onclick="acpTint='${c}';renderACPColors()"></div>`;}).join('');
 }
-function confirmAC(){const title=document.getElementById('acpi').value.trim();if(!title||!pendAC)return;S.cards.push({id:uid(),colId:pendAC,title,status:'pending',color:acpDot,cardTint:acpTint,tags:[],descHTML:'',checks:[],images:[],dateStart:'',dateEnd:'',bodyHidden:false});cpClose('acp');pendAC=null;acpDot='';acpTint='';saveAll();renderK();}
+function acpToggleTag(lbl){
+  const err=document.getElementById('acp-tag-err');if(err)err.style.display='none';
+  if(acpTags.includes(lbl))acpTags=acpTags.filter(t=>t!==lbl);else acpTags.push(lbl);
+  renderACPColors();
+}
+function confirmAC(){
+  const title=document.getElementById('acpi').value.trim();
+  if(!title||!pendAC)return;
+  if(acpTags.length===0){
+    const err=document.getElementById('acp-tag-err');
+    if(err){err.style.display='block';}
+    return;
+  }
+  S.cards.push({id:uid(),colId:pendAC,title,status:'pending',color:'',cardTint:acpTint,tags:[...acpTags],tagChecks:{},descHTML:'',checks:[],images:[],pdfs:[],dateStart:'',dateEnd:'',bodyHidden:false});
+  cpClose('acp');pendAC=null;acpTags=[];acpTint='';saveAll();renderK();
+}
 function showAddColPop(){document.getElementById('adcp').classList.add('open');const i=document.getElementById('adcpi');i.value='';setTimeout(()=>i.focus(),50);}
 function confirmACol(){const title=document.getElementById('adcpi').value.trim()||'NUEVA';S.cols.push({id:uid(),title,color:'#7a7060'});cpClose('adcp');saveAll();renderK();}
 function askDelCol(id){const col=S.cols.find(c=>c.id===id);if(!col)return;pendDC=id;document.getElementById('dcpm').textContent=`¿Eliminar "${col.title}"? Se borrarán todas sus cards.`;document.getElementById('dcp').classList.add('open');}
@@ -1015,10 +1039,7 @@ function addChk(){const c=S.cards.find(x=>x.id===editId);if(!c)return;const inp=
 function toggleChk(i,v){
   const c=S.cards.find(x=>x.id===editId);if(!c)return;
   c.checks[i].done=v;
-  const allDone=c.checks.length>0&&c.checks.every(ch=>ch.done);
-  const anyDone=c.checks.some(ch=>ch.done);
-  if(allDone){c.status='done';document.getElementById('mstat').value='done';}
-  else if(c.status==='done'){c.status=anyDone?'progress':'pending';document.getElementById('mstat').value=c.status;}
+  // Internal checks are tracking only - do NOT auto-complete the card
   saveAll();renderChks(c);renderK();
 }
 function delChk(i){const c=S.cards.find(x=>x.id===editId);if(!c)return;c.checks.splice(i,1);saveAll();renderChks(c);}
@@ -1034,16 +1055,15 @@ function renderDash(){
   const p=document.getElementById('dash');
   const tot=S.cards.length;
   // A card is "done" if status=done OR all its active tags are ticked
-  const isDone=c=>{
-    if(c.status==='done')return true;
-    const tags=c.tags||[];
-    if(!tags.length)return false;
-    return tags.every(t=>c.tagChecks&&c.tagChecks[t]);
+  const isDone=cd=>{
+    const tags=cd.tags||[];
+    if(tags.length&&tags.every(t=>cd.tagChecks&&cd.tagChecks[t]))return true;
+    if(!tags.length&&cd.status==='done')return true;
+    return false;
   };
   const done=S.cards.filter(isDone).length;
-  const prog=S.cards.filter(c=>!isDone(c)&&c.status==='progress').length;
-  const blk=S.cards.filter(c=>c.status==='blocked').length;
-  const pnd=S.cards.filter(c=>!isDone(c)&&c.status==='pending').length;
+  const pnd=S.cards.filter(cd=>!isDone(cd)).length;
+  const prog=0; const blk=0;
   const pct=tot?Math.round(done/tot*100):0;
   const cb=S.cols.map(col=>{
     const cc=S.cards.filter(c=>c.colId===col.id);
@@ -1059,11 +1079,34 @@ function renderDash(){
     const tp=Math.round(td/tc.length*100);
     return`<div class="dbr"><div class="dbl"><span style="color:${t.color}">${t.label}</span><span>${tp}% (${td}/${tc.length})</span></div><div class="dbt"><div class="dbf" style="width:${tp}%;background:${t.color}"></div></div></div>`;
   }).join('');
-  p.innerHTML=`<h2>ESTADO GLOBAL</h2><div class="ds"><div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;font-family:var(--mono)">COMPLETADO</div><div class="db">${pct}<span style="font-size:14px;color:var(--text-muted)">%</span></div><div class="dsub">${done} de ${tot} cards</div><div class="dbt" style="margin-top:7px"><div class="dbf" style="width:${pct}%;background:#1a9e74"></div></div><div class="dsg"><div class="dst"><div class="dstn" style="color:var(--text-muted)">${pnd}</div><div class="dstl">PEND.</div></div><div class="dst"><div class="dstn" style="color:var(--accent4)">${prog}</div><div class="dstl">EN CURSO</div></div><div class="dst"><div class="dstn" style="color:var(--accent3)">${done}</div><div class="dstl">LISTO</div></div><div class="dst"><div class="dstn" style="color:var(--accent2)">${blk}</div><div class="dstl">BLOQ.</div></div></div></div><h2>POR COLUMNA</h2><div class="ds">${cb}</div><h2>POR ETIQUETA</h2><div class="ds">${tb||'<div style="color:var(--text-dim);font-size:11px">Sin etiquetas</div>'}</div>`;
+  // Column boxes: active (non-done) cards per column
+  const colBoxes=S.cols.map(col=>{
+    const all=S.cards.filter(cd=>cd.colId===col.id);
+    const active=all.filter(cd=>!isDone(cd)).length;
+    return`<div class="dst" style="border-left:3px solid ${col.color||'#888'}"><div class="dstn" style="color:${col.color||'var(--text)'}">${active}</div><div class="dstl">${esc(col.title).slice(0,10)}</div></div>`;
+  }).join('');
+  const showAll=document.getElementById('dash-cols-expand')?.dataset.open==='1';
+  const cols4=S.cols.slice(0,showAll?999:4);
+  const colBoxes4=cols4.map(col=>{
+    const all=S.cards.filter(cd=>cd.colId===col.id);
+    const active=all.filter(cd=>!isDone(cd)).length;
+    return`<div class="dst" style="border-left:3px solid ${col.color||'#888'}"><div class="dstn" style="color:${col.color||'var(--text)'}">${active}</div><div class="dstl">${esc(col.title).slice(0,10)}</div></div>`;
+  }).join('');
+  const hasMore=S.cols.length>4;
+  p.innerHTML=`<h2>ESTADO GLOBAL</h2><div class="ds"><div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;font-family:var(--mono)">COMPLETADO</div><div class="db">${pct}<span style="font-size:14px;color:var(--text-muted)">%</span></div><div class="dsub">${done} de ${tot} cards</div><div class="dbt" style="margin-top:7px"><div class="dbf" style="width:${pct}%;background:#1a9e74"></div></div>
+  <div class="dsg" id="dash-cols-grid" style="margin-top:8px;">${colBoxes4}</div>
+  ${hasMore?`<button id="dash-cols-expand" data-open="${showAll?'1':'0'}" onclick="toggleDashCols()" style="width:100%;margin-top:4px;background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);font-family:var(--mono);font-size:10px;padding:4px;cursor:pointer;">${showAll?'▲ Mostrar menos':'▼ Mostrar todas ('+S.cols.length+')'}</button>`:''}
+  </div><h2>POR COLUMNA</h2><div class="ds">${cb}</div><h2>POR ETIQUETA</h2><div class="ds">${tb||'<div style="color:var(--text-dim);font-size:11px">Sin etiquetas</div>'}</div>`;
+}
+function toggleDashCols(){
+  const btn=document.getElementById('dash-cols-expand');
+  if(!btn)return;
+  btn.dataset.open=btn.dataset.open==='1'?'0':'1';
+  renderDash();
 }
 function renderTP(){
   const tot=S.cards.length;
-  const isDone=c=>c.status==='done'||((c.tags||[]).length>0&&(c.tags||[]).every(t=>c.tagChecks&&c.tagChecks[t]));
+  const isDone=cd=>{const tags=cd.tags||[];if(tags.length&&tags.every(t=>cd.tagChecks&&cd.tagChecks[t]))return true;if(!tags.length&&cd.status==='done')return true;return false;};
   const done=S.cards.filter(isDone).length;
   const blk=S.cards.filter(c=>c.status==='blocked').length;
   const pct=tot?Math.round(done/tot*100):0;
