@@ -220,7 +220,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 .ctag-prog{font-size:9px;font-weight:700;padding:2px 5px 2px 7px;border-radius:4px;letter-spacing:.5px;font-family:var(--mono);display:inline-flex;align-items:center;gap:5px;user-select:none;background:#fff;}
 .ctag-prog.done{opacity:.6;}
 .ctag-prog.done .ctag-label-text{text-decoration:line-through;}
-.ctag-tick{cursor:pointer;width:15px;height:15px;border-radius:3px;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;background:#fff;transition:all .1s;order:1;color:transparent;line-height:1;}
+.ctag-tick{cursor:pointer;width:15px;height:15px;border-radius:3px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;background:#fff;transition:all .1s;order:1;color:transparent;line-height:1;}
 .ctag-tick:hover{background:#f8fff8;}
 .ctag-tick.on{background:#fff;color:#1a9e74;}
 /* Modal tag checkboxes */
@@ -477,9 +477,9 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 <div class="cpop" id="acp" onclick="cpOut('acp',event)">
   <div class="cpbox"><h3>Nueva card</h3>
     <input id="acpi" class="cpinp" type="text" placeholder="Título…" onkeydown="if(event.key==='Enter')confirmAC();if(event.key==='Escape')cpClose('acp')">
-    <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.5px;margin-bottom:5px;">ETIQUETAS DE PROGRESO <span style="color:var(--accent2)">*obligatorio</span></div>
+    <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.5px;margin-bottom:5px;">ETIQUETAS DE PROGRESO <span style="color:var(--text-dim);font-weight:400;">(opcional)</span></div>
     <div id="acp-tags" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px;"></div>
-    <div id="acp-tag-err" style="display:none;font-size:10px;color:#c0392b;font-family:var(--mono);margin-bottom:6px;">Selecciona al menos una etiqueta</div>
+    <div id="acp-tag-err" style="display:none;font-size:10px;color:var(--text-dim);font-family:var(--mono);margin-bottom:6px;">Sin etiquetas, esta card no contará en el progreso global</div>
     <div style="font-size:9px;color:var(--text-dim);font-family:var(--mono);letter-spacing:.5px;margin-bottom:4px;margin-top:6px;">▬ FONDO CARD (pastel)</div>
     <div id="acp-tints" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;"></div>
     <div class="cpbtns"><button class="cpb" onclick="cpClose('acp')">Cancelar</button><button class="cpb ok" onclick="confirmAC()">Añadir</button></div>
@@ -724,7 +724,8 @@ function cardH(c){
     const checked=c.tagChecks[t.label];
     const bg=hex2rgba(t.color,.13);
     const chipBg=checked?hex2rgba(t.color,.25):hex2rgba(t.color,.13);
-    return`<span class="ctag-prog${checked?' done':''}" style="background:${chipBg};color:${t.color};border:1.5px solid ${t.color}40;">
+    const tickBorder=hex2rgba(t.color,.6);
+    return`<span class="ctag-prog${checked?' done':''}" style="background:${chipBg};color:${t.color};border:1.5px solid ${hex2rgba(t.color,.4)};">
       <span class="ctag-label-text">${t.label}</span>
       <span class="ctag-tick${checked?' on':''}" style="border-color:${t.color};" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')">${checked?'✓':''}</span>
     </span>`;
@@ -817,18 +818,13 @@ function renderACPColors(){
   if(tintW)tintW.innerHTML=TINT_COLORS.map(c=>{if(!c)return`<div class="csw" style="background:#fff;border:1.5px solid #ddd;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#bbb;" onclick="acpTint='';renderACPColors()">✕</div>`;const isA=c!==''&&acpTint===c;return`<div class="csw${isA?' act':''}" style="background:${c};width:18px;height:18px;" onclick="acpTint='${c}';renderACPColors()"></div>`;}).join('');
 }
 function acpToggleTag(lbl){
-  const err=document.getElementById('acp-tag-err');if(err)err.style.display='none';
   if(acpTags.includes(lbl))acpTags=acpTags.filter(t=>t!==lbl);else acpTags.push(lbl);
+  const err=document.getElementById('acp-tag-err');if(err)err.style.display=acpTags.length===0?'block':'none';
   renderACPColors();
 }
 function confirmAC(){
   const title=document.getElementById('acpi').value.trim();
   if(!title||!pendAC)return;
-  if(acpTags.length===0){
-    const err=document.getElementById('acp-tag-err');
-    if(err){err.style.display='block';}
-    return;
-  }
   S.cards.push({id:uid(),colId:pendAC,title,status:'pending',color:'',cardTint:acpTint,tags:[...acpTags],tagChecks:{},descHTML:'',checks:[],images:[],pdfs:[],dateStart:'',dateEnd:'',bodyHidden:false});
   cpClose('acp');pendAC=null;acpTags=[];acpTint='';saveAll();renderK();
 }
@@ -883,7 +879,7 @@ function openM(id){
   document.getElementById('mtitle').value=card.title;
   document.getElementById('mcoli').textContent='en '+(col?col.title:'');
   document.getElementById('mdesc').innerHTML=card.descHTML||'';
-  document.getElementById('mstat').value=card.status||'pending';
+  // status field removed from UI; status still tracked internally
   const stripColor=(card.color&&card.color!=='')?card.color:((card.cardTint&&card.cardTint!=='')?card.cardTint:'');
   const strip=document.getElementById('mstrip');
   strip.style.background=stripColor||'transparent';
@@ -1062,16 +1058,17 @@ function rmImg(i){const c=S.cards.find(x=>x.id===editId);if(!c)return;c.images.s
 // ── DASHBOARD ──
 function renderDash(){
   const p=document.getElementById('dash');
-  const tot=S.cards.length;
-  // A card is "done" if status=done OR all its active tags are ticked
+  // Only cards WITH tags count toward global completion. Tagless cards are tracked but excluded from %.
+  const trackable=S.cards.filter(cd=>(cd.tags||[]).length>0);
+  const tot=trackable.length;
   const isDone=cd=>{
     const tags=cd.tags||[];
-    if(tags.length&&tags.every(t=>cd.tagChecks&&cd.tagChecks[t]))return true;
-    if(!tags.length&&cd.status==='done')return true;
-    return false;
+    if(!tags.length)return false; // tagless cards never count as done in global stats
+    return tags.every(t=>cd.tagChecks&&cd.tagChecks[t]);
   };
-  const done=S.cards.filter(isDone).length;
-  const pnd=S.cards.filter(cd=>!isDone(cd)).length;
+  const done=trackable.filter(isDone).length;
+  const pnd=trackable.filter(cd=>!isDone(cd)).length;
+  const untracked=S.cards.length-trackable.length;
   const prog=0; const blk=0;
   const pct=tot?Math.round(done/tot*100):0;
   const cb=S.cols.map(col=>{
@@ -1102,7 +1099,7 @@ function renderDash(){
     return`<div class="dst" style="border-left:3px solid ${col.color||'#888'}"><div class="dstn" style="color:${col.color||'var(--text)'}">${active}</div><div class="dstl">${esc(col.title).slice(0,10)}</div></div>`;
   }).join('');
   const hasMore=S.cols.length>4;
-  p.innerHTML=`<h2>ESTADO GLOBAL</h2><div class="ds"><div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;font-family:var(--mono)">COMPLETADO</div><div class="db">${pct}<span style="font-size:14px;color:var(--text-muted)">%</span></div><div class="dsub">${done} de ${tot} cards</div><div class="dbt" style="margin-top:7px"><div class="dbf" style="width:${pct}%;background:#1a9e74"></div></div>
+  p.innerHTML=`<h2>ESTADO GLOBAL</h2><div class="ds"><div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;font-family:var(--mono)">COMPLETADO</div><div class="db">${pct}<span style="font-size:14px;color:var(--text-muted)">%</span></div><div class="dsub">${done} de ${tot} cards${untracked?` <span style="color:var(--text-dim)">(+${untracked} sin etiquetas)</span>`:''}</div><div class="dbt" style="margin-top:7px"><div class="dbf" style="width:${pct}%;background:#1a9e74"></div></div>
   <div class="dsg" id="dash-cols-grid" style="margin-top:8px;">${colBoxes4}</div>
   ${hasMore?`<button id="dash-cols-expand" data-open="${showAll?'1':'0'}" onclick="toggleDashCols()" style="width:100%;margin-top:4px;background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text-muted);font-family:var(--mono);font-size:10px;padding:4px;cursor:pointer;">${showAll?'▲ Mostrar menos':'▼ Mostrar todas ('+S.cols.length+')'}</button>`:''}
   </div><h2>POR COLUMNA</h2><div class="ds">${cb}</div><h2>POR ETIQUETA</h2><div class="ds">${tb||'<div style="color:var(--text-dim);font-size:11px">Sin etiquetas</div>'}</div>`;
@@ -1114,9 +1111,10 @@ function toggleDashCols(){
   renderDash();
 }
 function renderTP(){
-  const tot=S.cards.length;
-  const isDone=cd=>{const tags=cd.tags||[];if(tags.length&&tags.every(t=>cd.tagChecks&&cd.tagChecks[t]))return true;if(!tags.length&&cd.status==='done')return true;return false;};
-  const done=S.cards.filter(isDone).length;
+  const trackable=S.cards.filter(cd=>(cd.tags||[]).length>0);
+  const tot=trackable.length;
+  const isDone=cd=>{const tags=cd.tags||[];return tags.length>0&&tags.every(t=>cd.tagChecks&&cd.tagChecks[t]);};
+  const done=trackable.filter(isDone).length;
   const blk=S.cards.filter(c=>c.status==='blocked').length;
   const pct=tot?Math.round(done/tot*100):0;
   document.getElementById('topbar-progress').innerHTML=`<div class="prog-pill"><div class="dot" style="background:#1a9e74"></div>${pct}%</div>${blk?`<div class="prog-pill"><div class="dot" style="background:var(--accent2)"></div>${blk} bloq.</div>`:''}`;}
