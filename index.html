@@ -217,7 +217,7 @@ body{background:var(--bg);font-family:var(--font);color:var(--text);height:100vh
 #msb{width:206px;border-left:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;background:var(--bg2);}
 .mst{font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-family:var(--mono);}
 /* Tag chips with progress tick */
-.ctag-prog{font-size:9px;font-weight:700;padding:2px 5px 2px 7px;border-radius:4px;letter-spacing:.5px;font-family:var(--mono);display:inline-flex;align-items:center;gap:5px;user-select:none;background:#fff;}
+.ctag-prog{font-size:9px;font-weight:700;padding:4px 6px;border-radius:4px;letter-spacing:.5px;font-family:var(--mono);display:inline-flex;align-items:center;gap:5px;user-select:none;background:#fff;}
 .ctag-prog.done{opacity:.6;}
 .ctag-prog.done .ctag-label-text{text-decoration:line-through;}
 .ctag-tick{cursor:pointer;width:15px;height:15px;border-radius:3px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;background:#fff;transition:all .1s;order:1;color:transparent;line-height:1;}
@@ -724,10 +724,10 @@ function cardH(c){
     const checked=c.tagChecks[t.label];
     const bg=hex2rgba(t.color,.13);
     const chipBg=checked?hex2rgba(t.color,.25):hex2rgba(t.color,.13);
-    const tickBorder=hex2rgba(t.color,.6);
-    return`<span class="ctag-prog${checked?' done':''}" style="background:${chipBg};color:${t.color};border:1.5px solid ${hex2rgba(t.color,.4)};">
+    const borderCol=hex2rgba(t.color,.4);
+    return`<span class="ctag-prog${checked?' done':''}" style="background:${chipBg};color:${t.color};border:1.5px solid ${borderCol};">
       <span class="ctag-label-text">${t.label}</span>
-      <span class="ctag-tick${checked?' on':''}" style="border-color:${t.color};" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')">${checked?'✓':''}</span>
+      <span class="ctag-tick${checked?' on':''}" style="border-color:${borderCol};" onclick="event.stopPropagation();tickTagInline('${c.id}','${t.label}')">${checked?'✓':''}</span>
     </span>`;
   }).join('');
   const tags=c.tags||[];
